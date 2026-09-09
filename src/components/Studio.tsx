@@ -16,14 +16,13 @@ import { PaintEvent } from "@/lib/events";
 import { FrameFeature, analyse } from "@/lib/audio/analyzer";
 import { TimedWord } from "@/lib/audio/compose";
 import { buildPiece, openingSeed, Piece } from "@/lib/pipeline";
-import { compose as composeEvents } from "@/lib/audio/compose";
-import { Recorder, MAX_MS, MIN_MS } from "@/lib/audio/recorder";
-import { LiveSpeech } from "@/lib/speech";
+import { MAX_MS, MIN_MS } from "@/lib/audio/recorder";
+import type { Recorder as RecorderType } from "@/lib/audio/recorder";
+import type { LiveSpeech as LiveSpeechType } from "@/lib/speech";
 import { loadLexicon } from "@/lib/semantics/lexicon";
 import { loadSentiment } from "@/lib/semantics/sentiment";
 import { encodeShare } from "@/lib/share";
 import { Prompt } from "@/lib/prompts";
-import { synthAnalysis, synthWords, SPEAKERS, SAMPLE_WORDS } from "@/lib/synth";
 
 type Phase = "idle" | "countdown" | "recording" | "result";
 
@@ -45,8 +44,8 @@ export function Studio({ prompt }: { prompt: Prompt }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const rec = useRef<Recorder | null>(null);
-  const speech = useRef<LiveSpeech | null>(null);
+  const rec = useRef<RecorderType | null>(null);
+  const speech = useRef<LiveSpeechType | null>(null);
   const frames = useRef<FrameFeature[]>([]);
   const words = useRef<TimedWord[]>([]);
   const painter = useRef<Painter | null>(null);
@@ -61,45 +60,35 @@ export function Studio({ prompt }: { prompt: Prompt }) {
   // the one thing that explains the product.
   useEffect(() => {
     if (phase !== "idle") return;
-    // Water, always. The product is named after Impression, Sunrise -- a
-    // harbour at dawn -- and water is the subject whose horizontal banding
-    // reads as a painting fastest, which is what a seed piece has to do.
-    // Composed with the subject pinned rather than selected, because the
-    // colour table is deliberately not loaded on the landing page (PRD 13) and
-    // selection without it would be a coin toss.
-    const a = synthAnalysis(SPEAKERS[1], 20260909);
-    const w = synthWords(SAMPLE_WORDS.water, a, 20260909);
-    const base = buildPiece(a, w);
-    const r = composeEvents({
-      analysis: a, words: w, sentiment: base.sentiment,
-      selection: { ...base.selection, subject: "water" }, seed: base.seed,
-    });
-    const p = { ...base, events: r.events, durationMs: a.durationMs };
     let cancelled = false;
-    const c = canvasRef.current;
-    if (!c) return;
-    const { ctx, cfg } = fitCanvas(c, 4 / 3);
-    const pt = new Painter(ctx, cfg, p.seed);
-    const order = drawOrder(p.events, false);
-    let i = 0;
-    const start = performance.now();
-    // Loops, muted (PRD 3). Faster than real time: the seed piece has to
-    // explain the product before the visitor decides whether to stay.
-    let t0 = start;
-    const tick = () => {
+    let frame = 0;
+
+    // Dynamically imported: the analyser, composer and speaker profiles exist
+    // only to build this one piece, and they have no business in the landing
+    // page's initial bundle (PRD 13).
+    void import("@/lib/seed").then(({ makeSeedPiece }) => {
       if (cancelled) return;
-      const now = (performance.now() - t0) * 4;
-      while (i < order.length && p.events[order[i]].t <= now) { pt.draw(p.events[order[i]], order[i]); i++; }
-      if (i >= order.length && now > p.durationMs + 2600) {
-        i = 0; t0 = performance.now();
-        const again = fitCanvas(c, 4 / 3);
-        pt.begin();
-        void again;
-      }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    return () => { cancelled = true; };
+      const c = canvasRef.current;
+      if (!c) return;
+      const p = makeSeedPiece();
+      const { ctx, cfg } = fitCanvas(c, 4 / 3);
+      const pt = new Painter(ctx, cfg, p.seed);
+      const order = drawOrder(p.events, false);
+      let i = 0;
+      // Loops, muted (PRD 3). Faster than real time: the seed piece has to
+      // explain the product before the visitor decides whether to stay.
+      let t0 = performance.now();
+      const tick = () => {
+        if (cancelled) return;
+        const now = (performance.now() - t0) * 4;
+        while (i < order.length && p.events[order[i]].t <= now) { pt.draw(p.events[order[i]], order[i]); i++; }
+        if (i >= order.length && now > p.durationMs + 2600) { i = 0; t0 = performance.now(); pt.begin(); }
+        frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    });
+
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
   }, [phase]);
 
   /* ------------------------------------------------------ live painting -- */
@@ -147,6 +136,12 @@ export function Studio({ prompt }: { prompt: Prompt }) {
     // and neither is read until someone has actually spoken.
     void loadLexicon().catch(() => {});
     void loadSentiment().catch(() => {});
+
+    // Loaded on demand: nothing here is reachable until this button is tapped.
+    const [{ Recorder }, { LiveSpeech }] = await Promise.all([
+      import("@/lib/audio/recorder"),
+      import("@/lib/speech"),
+    ]);
 
     speech.current = new LiveSpeech((w) => { words.current = w; });
 
