@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.env
+.env.*
+!.env.example
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+/tmp
+public/lexicon.bin.umap-*.json

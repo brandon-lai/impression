@@ -1,0 +1,29 @@
+{
+  "name": "impression",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "lexicon": "node scripts/build-lexicon.mjs",
+    "migrate:local": "psql \"$DATABASE_URL\" -f supabase/migrations/0001_init.sql"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "postgres": "3.4.7",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.1",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.1",
+    "esbuild": "^0.25.10",
+    "typescript": "5.9.3",
+    "umap-js": "^1.4.0"
+  }
+}

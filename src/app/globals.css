@@ -1,0 +1,64 @@
+/* Design tokens (PRD 9). One accent, one place. The painting is the only
+   saturated thing on screen; the chrome never competes with it for colour. */
+:root {
+  --ground: #f7f5f0;
+  --ground-deep: #ede9e0;
+  --ink: #2a2e35;
+  --muted: #8a8f98;
+  --signal: #4a6d8c;
+  --rule: #e2ddd2;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-ui), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { min-height: 100dvh; }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+a { color: var(--signal); }
+
+/* The gallery label. The only typographic flourish in the product (PRD 9). */
+.title {
+  font-family: var(--font-title), Georgia, serif;
+  font-style: italic;
+  font-size: clamp(1.5rem, 4.2vw, 2.15rem);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.meta { color: var(--muted); font-size: 0.9rem; }
+
+.canvas-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+canvas.painting {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--ground-deep);
+}
+
+/* Motion budget: one orchestrated moment, the painting forming (PRD 9).
+   No section fades, no hover transitions, no scroll reveals. */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
