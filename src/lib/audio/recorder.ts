@@ -55,6 +55,9 @@ export class Recorder {
 
   get state() { return this.phase; }
   get elapsedMs() { return this.phase === "recording" ? performance.now() - this.startedAt : 0; }
+  /** The floor measured during the countdown. The live pass needs it to detect
+   *  pauses against the room the user is actually in. */
+  get noiseFloor() { return this.noiseFloorDb; }
 
   async start(): Promise<void> {
     try {

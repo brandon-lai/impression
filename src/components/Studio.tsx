@@ -93,7 +93,11 @@ export function Studio({ prompt }: { prompt: Prompt }) {
 
   /* ------------------------------------------------------ live painting -- */
   const paintLive = useCallback(() => {
-    const a = analyse(frames.current, rec.current ? -50 : -50);
+    // The floor calibrated during the countdown, not a constant. Pause
+    // detection is measured against it, and pauses are what separate breath
+    // groups -- so a hardcoded floor means a quiet room produces one
+    // unbroken cluster and a loud one produces nothing but gaps.
+    const a = analyse(frames.current, rec.current?.noiseFloor ?? -50);
     if (a.groups.length <= drawnGroups.current) return;
 
     if (!painter.current) {
