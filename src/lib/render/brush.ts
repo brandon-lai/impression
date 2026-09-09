@@ -83,14 +83,24 @@ function buildMask(variant: number, band: number): AnyCanvas {
       // occasional dead fibre
       // A few dead fibres, not many. Too many and the mark combs apart into
       // separate spikes instead of holding together as one loaded stroke.
-      if (jitter(u * 0.97) < 0.10) v *= 0.45 + 0.4 * jitter(u * 1.31);
+      if (jitter(u * 0.97) < 0.08) v *= 0.55 + 0.35 * jitter(u * 1.31);
       bristles[y] = v;
     }
   }
 
-  // Ragged outline. An elliptical footprint is the tell of a synthetic brush.
-  const edgeTop = lattice(rand, 14);
-  const edgeBot = lattice(rand, 14);
+  //
+  // Ragged outline. An elliptical footprint is the tell of a synthetic brush,
+  // but the raggedness has to be *low frequency*.
+  //
+  // At 14 lattice points across a 160px tip the edge wobbles every ~11px,
+  // and because a stroke stamps the same mask every ~0.3 widths those wobbles
+  // line up between overlapping copies into a regular comb. On screen the
+  // strokes came out looking like fern fronds rather than brush marks. Fewer
+  // points and a smaller amplitude keep the edge irregular without the
+  // repeat ever becoming visible.
+  //
+  const edgeTop = lattice(rand, 5);
+  const edgeBot = lattice(rand, 5);
   const headBite = lattice(rand, 9);
   const grain = lattice(rand, 96);
 
@@ -104,13 +114,18 @@ function buildMask(variant: number, band: number): AnyCanvas {
       const vx = x / (TIP_W - 1);
 
       // --- envelope along the stroke (x): loaded head, dragged-out tail ---
+      // Both ends must reach zero. The first version scaled the tail ramp by a
+      // factor below 1, so most masks stopped at ~0.45 alpha and every stamp
+      // ended in a hard vertical cut -- visible on the landing page as a field
+      // of translucent rectangles rather than brushwork. The bite varies where
+      // the taper *starts*, not how far down it gets.
       const head = smoothstep(0, 0.10 + 0.10 * headBite(vx), vx);
-      const tail = 1 - smoothstep(0.55, 1.0, vx) * (0.55 + 0.45 * headBite(vx * 0.6));
+      const tail = 1 - smoothstep(0.42 + 0.28 * headBite(vx * 0.6), 1.0, vx);
       const ex = head * Math.max(0, tail);
 
       // --- envelope across the stroke (y), with a ragged upper/lower edge ---
-      const top = 0.06 + 0.14 * edgeTop(vx);
-      const bot = 0.94 - 0.14 * edgeBot(vx);
+      const top = 0.07 + 0.07 * edgeTop(vx);
+      const bot = 0.93 - 0.07 * edgeBot(vx);
       const ey =
         smoothstep(top - softness, top + softness * 0.6, vy) *
         (1 - smoothstep(bot - softness * 0.6, bot + softness, vy));

@@ -62,3 +62,109 @@ canvas.painting {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---------------------------------------------------------------- studio -- */
+/* Layout per PRD 9: the painting, then the label, then one row of controls.
+   Nothing floats over the painting. */
+
+.studio {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: clamp(16px, 3vw, 32px);
+  gap: clamp(16px, 3vh, 28px);
+}
+
+.stage { display: flex; justify-content: center; }
+
+.frame {
+  position: relative;
+  width: 100%;
+  max-height: 70vh;
+  aspect-ratio: 4 / 3;
+}
+
+.frame canvas.painting {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The final pass cross-fades in over the live painting. It is the only
+   transition in the product, and it is part of the one orchestrated moment. */
+canvas.final { transition: opacity 620ms ease-in; }
+@media (prefers-reduced-motion: reduce) { canvas.final { transition: none; } }
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-title), Georgia, serif;
+  font-style: italic;
+  font-size: clamp(3rem, 12vw, 6rem);
+  color: var(--muted);
+}
+
+.panel { display: flex; flex-direction: column; gap: 10px; }
+.panel .title { margin: 0; }
+.panel .meta { margin: 0; }
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.record {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px 10px 14px;
+  border: 1px solid var(--signal);
+  border-radius: 999px;
+  color: var(--signal);
+  position: relative;
+}
+.record:disabled { opacity: 0.45; cursor: default; }
+.record .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--signal); }
+
+.record.recording { padding-left: 10px; }
+.ring { width: 26px; height: 26px; transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--ground-deep); stroke-width: 4; }
+.ring-progress { fill: none; stroke: var(--signal); stroke-width: 4; stroke-linecap: round; }
+
+.link { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.link:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
+
+.options { display: flex; gap: 20px; flex-wrap: wrap; color: var(--muted); font-size: 0.9rem; }
+.options label { display: inline-flex; gap: 7px; align-items: center; }
+
+.share-out { font-size: 0.9rem; margin: 4px 0 0; }
+.error { color: #8c4a4a; font-size: 0.9rem; margin: 4px 0 0; }
+
+.nav {
+  display: flex; gap: 16px; align-items: baseline;
+  font-size: 0.9rem; color: var(--muted);
+}
+.nav a { color: var(--muted); text-decoration: none; }
+
+/* ------------------------------------------------------------- gallery --- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: clamp(16px, 3vw, 28px);
+}
+.grid figure { margin: 0; }
+.grid figcaption { margin-top: 8px; }
+.grid .title { font-size: 1.05rem; }
+
+@media (max-width: 420px) {
+  .controls { gap: 14px; }
+  .options { gap: 12px; }
+}

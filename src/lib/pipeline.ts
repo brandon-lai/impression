@@ -59,13 +59,29 @@ export function selectionFeatures(a: Analysis, s: Sentiment): SelectionFeatures 
   };
 }
 
-export function buildPiece(a: Analysis, words: TimedWord[]): Piece {
+/**
+ * Seed from the opening of the clip only.
+ *
+ * The live pass has to pick a seed before it knows how long the recording will
+ * be, and the final pass must then reuse that exact seed or the finished piece
+ * would differ in every jitter detail from the one the user watched form --
+ * which PRD 7.7 forbids. Deriving it from the first breath group makes it
+ * available immediately and keeps it stable: the same audio always opens the
+ * same way.
+ */
+export function openingSeed(a: Analysis): number {
+  const g = a.groups[0];
+  if (!g) return hashNumbers([a.durationMs / 1000]);
+  return hashNumbers([g.f0Mean, g.f0Var, g.rmsMean, g.rate, g.centroidMean, a.noiseFloorDb]);
+}
+
+export function buildPiece(a: Analysis, words: TimedWord[], seedOverride?: number): Piece {
   assignWords(a.groups, words);
   const sentiment = analyseSentiment(words.map((w) => w.word));
   const feats = selectionFeatures(a, sentiment);
   const selection = selectSubject(feats);
   const light = lightFrom(sentiment.valence, feats.arousal, feats.brightness);
-  const seed = seedFor(a);
+  const seed = seedOverride ?? seedFor(a);
   const result = compose({ analysis: a, words, sentiment, selection, seed });
 
   return {

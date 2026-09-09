@@ -95,6 +95,28 @@ export function spectralFlux(mag: Float32Array, prev: Float32Array): number {
 }
 
 /**
+ * Decimate by an integer factor with a box pre-filter.
+ *
+ * The pitch detector is O(n^2) in the frame length. At 2048 samples and ~47
+ * frames a second that is roughly 200 million operations per second of audio,
+ * which will not hold the frame budget on the mid-tier Android the PRD names
+ * as the floor. Speech f0 tops out around 900Hz, so 48kHz is 8x more than the
+ * detector needs: decimating to 6kHz first cuts the work by 64x and costs
+ * nothing in accuracy over the 55-900Hz range that matters.
+ */
+export function decimate(frame: Float32Array, factor: number): Float32Array {
+  if (factor <= 1) return frame;
+  const n = Math.floor(frame.length / factor);
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let k = 0; k < factor; k++) s += frame[i * factor + k];
+    out[i] = s / factor;
+  }
+  return out;
+}
+
+/**
  * McLeod Pitch Method, matching the `pitchy` package's algorithm.
  *
  * Implemented here rather than imported so that the whole extraction path

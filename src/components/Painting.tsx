@@ -14,7 +14,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { PaintEvent } from "@/lib/events";
-import { Painter, RenderConfig, LIVE_CONFIG, FINAL_CONFIG, drawOrder } from "@/lib/render/renderer";
+import { Painter, RenderConfig, drawOrder } from "@/lib/render/renderer";
+import { fitCanvas } from "@/lib/render/fit";
 import type { Ctx2D } from "@/lib/render/brush";
 
 export interface PaintingProps {
@@ -44,24 +45,10 @@ export function Painting({
   const setup = useCallback((): { ctx: Ctx2D; cfg: RenderConfig } | null => {
     const canvas = ref.current;
     if (!canvas) return null;
-    const parent = canvas.parentElement;
     // Measure synchronously. Waiting on a ResizeObserver's first callback
     // leaves the canvas blank for a frame in a browser and forever in a
     // headless one, which is exactly the bug that makes a screenshot lie.
-    const cssW = Math.max(1, parent?.clientWidth || canvas.clientWidth || 640);
-    const cssH = Math.round(cssW / aspect);
-    // devicePixelRatio is read here, at the boundary, and passed in. The
-    // renderer itself must never read it: it has to stay a pure function of
-    // its arguments (PRD 4.7).
-    const dpr = Math.min(2, typeof window === "undefined" ? 1 : window.devicePixelRatio || 1);
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
-    canvas.style.width = `${cssW}px`;
-    canvas.style.height = `${cssH}px`;
-    const ctx = canvas.getContext("2d") as Ctx2D | null;
-    if (!ctx) return null;
-    const cfg = final ? FINAL_CONFIG(cssW, cssH, dpr) : LIVE_CONFIG(cssW, cssH, dpr);
-    return { ctx, cfg };
+    return fitCanvas(canvas, aspect, final);
   }, [aspect, final]);
 
   useLayoutEffect(() => {

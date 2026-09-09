@@ -23,6 +23,7 @@
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.1",
     "esbuild": "^0.25.10",
+    "server-only": "^0.0.1",
     "typescript": "5.9.3",
     "umap-js": "^1.4.0"
   }

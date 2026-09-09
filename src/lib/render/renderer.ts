@@ -46,12 +46,12 @@ export interface RenderConfig {
 
 export const LIVE_CONFIG = (w: number, h: number, pixelRatio: number): RenderConfig => ({
   width: w, height: h, pixelRatio,
-  stampSpacing: 0.30, canvasTexture: false, liftLightLayer: false,
+  stampSpacing: 0.22, canvasTexture: false, liftLightLayer: false,
 });
 
 export const FINAL_CONFIG = (w: number, h: number, pixelRatio: number): RenderConfig => ({
   width: w, height: h, pixelRatio,
-  stampSpacing: 0.20, canvasTexture: true, liftLightLayer: true,
+  stampSpacing: 0.15, canvasTexture: true, liftLightLayer: true,
 });
 
 /** Catmull-Rom through the control points, sampled to a polyline. */
@@ -142,13 +142,17 @@ export class Painter {
     ctx.fillRect(0, 0, W, H);
 
     const brushes = getBrushes();
+    // Scale matters here. Stretching the 160px tip mask across a third of the
+    // canvas turns its bristle detail into flat bands, and the underpainting
+    // reads as translucent slabs instead of as brushwork -- which is exactly
+    // how the first landing render looked.
     const bandW = W / 9;
-    for (let i = 0; i < 240; i++) {
+    for (let i = 0; i < 420; i++) {
       const cx = rand() * (W + bandW) - bandW / 2;
       const cy = rand() * H;
-      const len = bandW * (1.4 + rand() * 2.2);
-      const wid = H * (0.05 + rand() * 0.10);
-      const ang = (gauss(rand) * 0.5) + (rand() < 0.35 ? Math.PI / 2 : 0);
+      const len = bandW * (0.7 + rand() * 1.1);
+      const wid = H * (0.028 + rand() * 0.055);
+      const ang = (gauss(rand) * 0.7) + (rand() < 0.35 ? Math.PI / 2 : 0);
       const l = Math.max(0.34, Math.min(0.94, lightness + gauss(rand) * 0.11));
       const h = wrapHue(hue + gauss(rand) * 40);
       const fixed = noBlack(l, 0.05 + rand() * 0.045, h);
@@ -160,7 +164,7 @@ export class Painter {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(ang);
-      ctx.globalAlpha = 0.14 + rand() * 0.20;
+      ctx.globalAlpha = 0.11 + rand() * 0.17;
       ctx.drawImage(tip as CanvasImageSource, -len / 2, -wid / 2, len, wid);
       ctx.restore();
     }
@@ -243,7 +247,10 @@ export class Painter {
     const variant = (rand() * 5) | 0;
     const band = s.edgeBand;
     // Paint load drives how opaque and how densely deposited each print is.
-    const baseAlpha = 0.30 + 0.62 * Math.max(0, Math.min(1, s.load));
+    // Per-stamp alpha is low because prints accumulate: at this spacing five
+    // to seven overlap at any point along the path, and the stroke's opacity
+    // is their sum rather than any one of them.
+    const baseAlpha = (0.30 + 0.62 * Math.max(0, Math.min(1, s.load))) * 0.42;
     const tipLen = widthPx * TIP_ASPECT;
 
     let travelled = 0;

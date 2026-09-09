@@ -333,27 +333,34 @@ export function compose(input: ComposeInput): ComposeResult {
     for (let i = 0; i < STROKE_HARD_CAP; i++) kept.push(strokes[Math.floor(i * stride)]);
   }
 
-  // Within a cluster, emit under -> mid -> light so that temporal order already
-  // satisfies the layering rule (PRD 7.4.3) without the live pass having to
-  // see the future.
+  //
+  // The stream is a timeline, and it has to be emitted in timeline order.
+  //
+  // Cluster events were being pushed as each group closed and the strokes all
+  // appended afterwards, so the array read [ground, horizon, cluster x10,
+  // stroke x93]. Any consumer that plays it by timestamp -- the live pass, the
+  // share page, a future video renderer -- stalls on the *last* cluster's
+  // timestamp before it reaches the first stroke, and the painting stays blank
+  // until second 23 of 24. It looked fine in any view that drew the whole
+  // stream at once, which is why only rendering the animation caught it.
+  //
+  // Sorting by `t` also preserves the layering rule for free: within a cluster
+  // `layer` is assigned from the stroke's position through the group, so
+  // under -> mid -> light already runs in the same direction as time.
+  //
   const rank: Record<Layer, number> = { under: 0, mid: 1, light: 2 };
-  kept.sort((a, b) => a.clusterId - b.clusterId || rank[a.layer] - rank[b.layer] || a.t - b.t);
-  kept.sort((a, b) => a.clusterId - b.clusterId);
+  const structural = events.filter((e) => e.type === "ground" || e.type === "horizon");
+  const timed = [...events.filter((e) => e.type === "cluster"), ...kept]
+    .sort((a, b) =>
+      a.t - b.t ||
+      (a.type === "cluster" ? -1 : 0) - (b.type === "cluster" ? -1 : 0) ||
+      (a.type === "stroke" && b.type === "stroke" ? rank[a.layer] - rank[b.layer] : 0));
 
-  const byCluster = new Map<number, StrokeEvent[]>();
-  for (const s of kept) {
-    const arr = byCluster.get(s.clusterId) ?? [];
-    arr.push(s);
-    byCluster.set(s.clusterId, arr);
-  }
-  for (const [, arr] of byCluster) arr.sort((a, b) => rank[a.layer] - rank[b.layer] || a.t - b.t);
-  const ordered = [...byCluster.entries()].sort((a, b) => a[0] - b[0]).flatMap(([, v]) => v);
-
-  events.push(...ordered);
-  void rGround; void rLayout;
+  const ordered = kept;
+  const stream: PaintEvent[] = [...structural, ...timed];
 
   return {
-    events,
+    events: stream,
     strokeCount: ordered.length,
     lightnessRange: [lo, hi],
   };
