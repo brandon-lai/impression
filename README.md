@@ -300,7 +300,7 @@ surface for it: every subject, speaker and seed is a URL.
 
 | Metric | Target | Measured |
 |---|---|---|
-| Landing JS | <150KB gz (floor 250KB) | ~180KB gz — **over target, within floor** |
+| Landing JS | <150KB gz (floor 250KB) | 193KB gz — **over target, within floor** |
 | Colour table | <400KB gz | 240KB |
 | AudioWorklet | — | 3.2KB |
 | Stroke count | 80–200 (cap 300) | 51–144 across generated pieces |
