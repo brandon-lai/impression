@@ -4,13 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/build-worklet.mjs && next dev",
+    "prebuild": "node scripts/build-worklet.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.mjs",
-    "lexicon": "node scripts/build-lexicon.mjs",
-    "migrate:local": "psql \"$DATABASE_URL\" -f supabase/migrations/0001_init.sql"
+    "pretest": "node scripts/build-tests.mjs",
+    "test": "node --test tests/unit.test.mjs",
+    "test:api": "node --test tests/api.test.mjs",
+    "test:schema": "node --test tests/schema.test.mjs",
+    "lexicon": "node scripts/build-lexicon.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

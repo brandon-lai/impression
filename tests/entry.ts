@@ -11,4 +11,4 @@ export * from "../src/lib/pipeline";
 export * from "../src/lib/synth";
 export * from "../src/lib/moderation";
 export * from "../src/lib/prompts";
-export { colorFor, clusterHue } from "../src/lib/semantics/lexicon";
+export { colorFor, clusterHue, installLexicon, lexiconReady } from "../src/lib/semantics/lexicon";

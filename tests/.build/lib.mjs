@@ -649,6 +649,21 @@ function selectSubject(f) {
 
 // src/lib/semantics/lexicon.ts
 var table = null;
+function parse(buf) {
+  const view = new DataView(buf);
+  const count = view.getUint32(0, true);
+  const vocabLen = view.getUint32(4, true);
+  const vocab = new TextDecoder().decode(new Uint8Array(buf, 8, vocabLen)).split("\n");
+  const off = 8 + vocabLen + (vocabLen & 1);
+  const data = new Uint16Array(buf, off, count * 3);
+  const index = /* @__PURE__ */ new Map();
+  for (let i = 0; i < vocab.length; i++) index.set(vocab[i], i);
+  return { index, data };
+}
+function installLexicon(buf) {
+  table = parse(buf);
+}
+var lexiconReady = () => table !== null;
 function hashWord(w) {
   let h = 2166136261;
   for (let i = 0; i < w.length; i++) {
@@ -1297,7 +1312,9 @@ export {
   hann,
   hashNumbers,
   hashString,
+  installLexicon,
   isStroke,
+  lexiconReady,
   lightFrom,
   magnitudeSpectrum,
   makeTitle,

@@ -22,11 +22,27 @@ export function fitCanvas(
   const availW = Math.max(1, parent?.clientWidth || 640);
   const availH = parent?.clientHeight || 0;
 
-  let cssW = availW;
-  let cssH = cssW / aspect;
-  if (availH > 0 && cssH > availH) {
+  // When the canvas is absolutely positioned it does not contribute to its
+  // parent's height, so the parent's box is authoritative and CSS owns the
+  // shape -- which is what lets the stage go square on a phone and landscape
+  // on a desktop without this module knowing anything about breakpoints.
+  // Where the canvas is in flow (the harness, the gallery) the parent has no
+  // height of its own and the caller's aspect ratio decides.
+  const absolute =
+    typeof getComputedStyle !== "undefined" && getComputedStyle(c).position === "absolute";
+
+  let cssW: number;
+  let cssH: number;
+  if (absolute && availH > 0) {
+    cssW = availW;
     cssH = availH;
-    cssW = cssH * aspect;
+  } else {
+    cssW = availW;
+    cssH = cssW / aspect;
+    if (availH > 0 && cssH > availH) {
+      cssH = availH;
+      cssW = cssH * aspect;
+    }
   }
   cssW = Math.round(cssW);
   cssH = Math.round(cssH);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, hasDatabase, newId, newDeleteToken } from "@/lib/db";
 import { moderate } from "@/lib/moderation";
+import { PROMPTS } from "@/lib/prompts";
 import { gzipSync } from "node:zlib";
 
 export const runtime = "nodejs";
@@ -75,32 +76,45 @@ export async function POST(req: NextRequest) {
     if (still.length > 6 * 1024 * 1024) still = null; // preview only; never worth failing the share
   }
 
+  // An unknown prompt id is dropped rather than trusted. It is client-supplied
+  // and it is a foreign key: a stale or hand-edited value would otherwise take
+  // the whole insert down.
+  const promptId = PROMPTS.some((p) => p.id === body.promptId) ? body.promptId! : null;
+
   const id = newId();
   const deleteToken = newDeleteToken();
   const events = gzipSync(Buffer.from(JSON.stringify(body.events), "utf8"));
   const status = body.isPublic ? moderate(transcript) : "pending";
 
   const sql = db();
-  await sql.begin(async (tx) => {
-    await tx`
+  try {
+    await sql.begin(async (tx) => {
+      await tx`
       insert into pieces (
         id, seed, subject, subject_runner_up, light, title, events, duration_ms,
         transcript, audio_key, prompt_id, is_public, moderation_status, delete_token
       ) values (
         ${id}, ${Math.trunc(body.seed)}, ${body.subject}, ${body.runnerUp ?? null},
         ${body.light}, ${body.title}, ${events}, ${Math.round(body.durationMs)},
-        ${transcript}, ${audio ? `db:${id}` : null}, ${body.promptId ?? null},
+        ${transcript}, ${audio ? `db:${id}` : null}, ${promptId},
         ${Boolean(body.isPublic)}, ${status}, ${deleteToken}
       )`;
-    if (audio) {
-      await tx`insert into piece_audio (piece_id, mime_type, bytes)
-               values (${id}, ${body.audioMime ?? "audio/webm"}, ${audio})`;
-    }
-    if (still) {
-      await tx`insert into piece_still (piece_id, bytes) values (${id}, ${still})`;
-      await tx`update pieces set still_key = ${`db:${id}`} where id = ${id}`;
-    }
-  });
+      if (audio) {
+        await tx`insert into piece_audio (piece_id, mime_type, bytes)
+                 values (${id}, ${body.audioMime ?? "audio/webm"}, ${audio})`;
+      }
+      if (still) {
+        await tx`insert into piece_still (piece_id, bytes) values (${id}, ${still})`;
+        await tx`update pieces set still_key = ${`db:${id}`} where id = ${id}`;
+      }
+    });
+  } catch (e) {
+    // Never let a storage failure surface as an empty body: the client has a
+    // finished painting in hand and needs to know to fall back to the
+    // self-contained fragment link rather than silently losing the share.
+    console.error("piece insert failed", e);
+    return NextResponse.json({ error: "could not save piece" }, { status: 500 });
+  }
 
   return NextResponse.json({ id, deleteToken, moderationStatus: status }, { status: 201 });
 }

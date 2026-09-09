@@ -58,6 +58,23 @@ create index if not exists pieces_public_created_idx
   on pieces (created_at desc) where is_public;
 create index if not exists pieces_prompt_idx on pieces (prompt_id, created_at desc);
 
+-- Seed the built-in prompt rotation.
+--
+-- `pieces.prompt_id` references this table, and the daily prompt is otherwise
+-- a pure function of the date with no database involvement at all -- so
+-- without these rows every genuine share carrying a prompt id fails the
+-- foreign key and the route 500s. Caught by the integration tests rather than
+-- by anything that runs at build time.
+insert into prompts (id, text) values
+  ('calm',    'Describe somewhere you felt calm'),
+  ('travel',  'Talk about the last place you travelled'),
+  ('street',  'Describe your street'),
+  ('room',    'Tell me about a room you remember'),
+  ('now',     'Say what you can see right now'),
+  ('weather', 'Describe the weather where you are'),
+  ('morning', 'Talk about this morning')
+on conflict (id) do nothing;
+
 -- Row level security.
 --
 -- Supabase serves the anon key inside the client bundle, so a table without

@@ -39,6 +39,16 @@ function parse(buf: ArrayBuffer): Table {
   return { index, data };
 }
 
+/**
+ * Install an already-inflated artifact.
+ *
+ * Exists so the table can be loaded off disk in tests and off a worker message
+ * on the upload path, without either having to invent a fetch.
+ */
+export function installLexicon(buf: ArrayBuffer): void {
+  table = parse(buf);
+}
+
 export async function loadLexicon(url = "/lexicon.bin"): Promise<void> {
   if (table || inflight) { await inflight; return; }
   inflight = (async () => {

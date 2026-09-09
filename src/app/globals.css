@@ -86,6 +86,13 @@ canvas.painting {
   aspect-ratio: 4 / 3;
 }
 
+/* On a phone a 4:3 painting across the width is barely a third of the screen.
+   Square uses the space, and it is the shape these end up being looked at in
+   anyway once someone pastes the link somewhere. */
+@media (max-width: 640px) {
+  .frame { aspect-ratio: 1 / 1; max-height: 62vh; }
+}
+
 .frame canvas.painting {
   position: absolute;
   inset: 0;
