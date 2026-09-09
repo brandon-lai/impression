@@ -16,6 +16,9 @@ import { gunzipSync } from "node:zlib";
 // rather than exercising the out-of-vocabulary hash and calling it a pass.
 const raw = gunzipSync(readFileSync("public/lexicon.bin"));
 L.installLexicon(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+// The sentiment table is lazily imported in the browser; load it up front here
+// so the tests exercise it rather than the neutral fallback.
+await L.loadSentiment();
 
 const speakers = L.SPEAKERS;
 
@@ -203,7 +206,8 @@ test("subject selection is pure", () => {
 
 /* -------------------------------------------------------- sentiment ----- */
 
-test("sentiment handles negation and boosters", () => {
+test("sentiment handles negation and boosters", async () => {
+  await L.loadSentiment();
   const t = (s) => L.analyseSentiment(L.tokenize(s)).valence;
   assert.ok(t("this is good") > 0.2);
   assert.ok(t("this is not good") < 0);

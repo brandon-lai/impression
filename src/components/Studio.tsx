@@ -20,6 +20,7 @@ import { compose as composeEvents } from "@/lib/audio/compose";
 import { Recorder, MAX_MS, MIN_MS } from "@/lib/audio/recorder";
 import { LiveSpeech } from "@/lib/speech";
 import { loadLexicon } from "@/lib/semantics/lexicon";
+import { loadSentiment } from "@/lib/semantics/sentiment";
 import { encodeShare } from "@/lib/share";
 import { Prompt } from "@/lib/prompts";
 import { synthAnalysis, synthWords, SPEAKERS, SAMPLE_WORDS } from "@/lib/synth";
@@ -141,9 +142,11 @@ export function Studio({ prompt }: { prompt: Prompt }) {
     drawnGroups.current = 0;
     audioBlob.current = null;
 
-    // The colour table is fetched now, not on page load: it is 240KB and the
-    // landing page has a 150KB budget (PRD 13).
+    // The colour table and the sentiment lexicon are fetched now, not on page
+    // load: together they are ~330KB against a 150KB landing budget (PRD 13),
+    // and neither is read until someone has actually spoken.
     void loadLexicon().catch(() => {});
+    void loadSentiment().catch(() => {});
 
     speech.current = new LiveSpeech((w) => { words.current = w; });
 
@@ -202,7 +205,7 @@ export function Studio({ prompt }: { prompt: Prompt }) {
       } catch { /* keep the live transcript */ }
     }
 
-    await loadLexicon().catch(() => {});
+    await Promise.all([loadLexicon().catch(() => {}), loadSentiment().catch(() => {})]);
     const final = buildPiece(a, finalWords, liveSeed.current || openingSeed(a));
     setPiece(final);
 
